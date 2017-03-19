@@ -53,5 +53,61 @@ Finally we need to add the Saml20MetadataFetcher Module. This module comes with 
 
 ```
 
+## Section SAML2
 
+The saml2 configuration section is split into several specific configuration areas. You have to configure at least 3 of them, the rest are optionals. With those 3 I had my SAML2 section working.
 
+#### allowedAudienceUris [+Info](https://saml2.codeplex.com/wikipage?title=AllowedAudienceUris%20Element&referringTitle=Documentation)
+"Configures the SAML AudienceRestrictions values to use when generating assertions."
+
+We need to configure here the ID of the service provider.
+
+#### serviceProvider [+Info](https://saml2.codeplex.com/wikipage?title=ServiceProvider%20Element&referringTitle=Documentation)
+"Configures the service provider information such as endpoints, SAML AuthnContexts, and NameIdFormats."
+
+Again we need to configure here the ID of the service provider.
+
+In my case (OKTA) I was required to get a auto signed certificate, if that's your case, you can use the default certificate of your machine if you are in Windows.
+
+In the endpoints section we need to set up the paths of the ashx files and set the redirectUrl when the action succeded. In this example I set up a redirectUrl to my home controller and this is the one which allows or not the access. You can see more of that controller in the MVC Controller section.
+
+#### identityProviders [+Info](https://saml2.codeplex.com/wikipage?title=IdentityProviders%20Element&referringTitle=Documentation)
+"Configures the identity providers to be used for federation. Can be as simple as defining the location of the IdP metadata, or provide access to overriding IdP metadata with custom values, etc."
+
+Finally we need to specify the configuration information of the Identity Providers. In my case I override the default Provider settings by adding them manually
+
+The parameter "IDPS_DIRECTORY" is the Directory in which we have the metadata of the federation partners.
+And the parameter "OKTA_ENDPOINT" is the url of okta where you can set the idp.
+
+```csharp
+<saml2>
+    <allowedAudienceUris>
+      <audience uri="http://localhost:8888/" />
+    </allowedAudienceUris>
+
+    <serviceProvider id="http://localhost:8888/" server="http://localhost:8888/">
+       <signingCertificate findValue="CN=localhost" storeLocation="LocalMachine" storeName="My" x509FindType="FindBySubjectDistinguishedName" />
+      <endpoints>
+        <endpoint type="SignOn" localPath="Login.ashx" redirectUrl="~/home/private" />
+        <endpoint type="Logout" localPath="Logout.ashx" redirectUrl="~/home/index" />
+        <endpoint type="Metadata" localPath="Metadata.ashx" />
+      </endpoints>
+
+      <authenticationContexts comparison="Exact">
+        <add context="urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport" referenceType="AuthnContextClassRef" />
+      </authenticationContexts>
+    </serviceProvider>
+    
+    <identityProviders metadata="IDPS_DIRECTORY">
+      <add id="OKTA_ENDPOINT" default="true">
+        <certificateValidations>
+          <add type="SAML2.Specification.SelfIssuedCertificateSpecification, SAML2" />
+        </certificateValidations>
+      </add>
+    </identityProviders>
+  </saml2>
+```
+
+## MVC RouteConfig
+
+## MVC Controllers
