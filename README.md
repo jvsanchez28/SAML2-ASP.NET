@@ -110,4 +110,76 @@ And the parameter "OKTA_ENDPOINT" is the url of okta where you can set the idp.
 
 ## MVC RouteConfig
 
+Its necessary to add a new route ignore for the ashx files because of MVC gives the responsability of the routing of the request to his routing system and that means the handler endpoints will result in a Not Found Error when we try to access them.
+
+```csharp
+public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+            routes.IgnoreRoute("{resource}.ashx/{*pathInfo}");
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = "" }
+            );
+        }
+    }
+```
+
 ## MVC Controllers
+
+The MVC web application has two parts. One public part and another private part. To access to the private part we need to do a login action in OKTA. To separate the actions that a user can or can not do we use the Authorize. With that tag we are sure that before going in one of the sections that have it, it will check if the user have credentials to access it or not.
+
+As you can see in the Login action we do a redirect to the ashx file. This will redirect the action login to OKTA, allowing the user to put his credentials in the OKTA form.
+
+```csharp
+public class HomeController : Controller
+    {
+        public ActionResult Error()
+        {
+            return View("~/Views/Error.cshtml");
+        }
+
+        public ActionResult Index()
+        {
+            return View("~/Views/Index.cshtml");
+        }
+   
+        public ActionResult Login()
+        {
+            return Redirect("~/Login.ashx");
+        }
+
+        [Authorize]
+        public ActionResult Private()
+        {
+            return View("~/Views/Private.cshtml");
+        }
+
+        [Authorize]
+        public ActionResult Logout()
+        {
+            return Redirect("~/Logout.ashx");
+        }
+    }
+```
+If the user credentials are valid, we can specify the Authorize tag where to redirect the user. In our case, we will redirect him to the private section of the website (home/private). This will go to the controller and the Authorize tag will grant access to the private part.
+
+```csharp
+app.UseCookieAuthentication(new CookieAuthenticationOptions
+{
+    AuthenticationType = DefaultAuthenticationTypes.ApplicationCookie,
+    LoginPath = new PathString("/home/private"),
+    Provider = new CookieAuthenticationProvider
+    {
+        // Enables the application to validate the security stamp when the user logs in.
+        // This is a security feature which is used when you change a password or add an external login to your account.  
+        OnValidateIdentity = SecurityStampValidator.OnValidateIdentity<ApplicationUserManager, ApplicationUser>(
+            validateInterval: TimeSpan.FromMinutes(30),
+            regenerateIdentity: (manager, user) => user.GenerateUserIdentityAsync(manager))
+    }
+});
+```
